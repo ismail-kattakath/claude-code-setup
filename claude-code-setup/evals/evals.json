@@ -1,0 +1,25 @@
+{
+  "skill_name": "claude-code-setup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a Node.js Express API project in ~/projects/my-api. I want to start using Claude Code with it properly. Set it up correctly.",
+      "expected_output": "Creates .claude/ directory with settings.json (permissions + hooks), creates CLAUDE.md with all 5 required sections (overview, build/test commands, architecture, conventions, notes), adds proper .gitignore entries (.claude/settings.local.json, .claude/worktrees/), and reports a summary of what was created vs skipped. Does NOT overwrite existing files without asking."
+    },
+    {
+      "id": 2,
+      "prompt": "This is a Claude Code plugin I'm building. Can you audit it and fix anything that doesn't comply with the Build with Claude Code spec? The plugin has some agents and hooks already.",
+      "expected_output": "Runs Phase 1 DETECT commands, identifies .claude-plugin/ as plugin project, reads spec-checklist.md to audit all 9+ checklist sections, identifies missing items (e.g., missing <example> blocks in agent descriptions, wrong hooks.json format, missing ${CLAUDE_PLUGIN_ROOT} in paths), reports PRESENT/MISSING/NEEDS REVIEW for each item, and creates/fixes missing files. Invokes agent-development and hook-development sub-skills as needed."
+    },
+    {
+      "id": 3,
+      "prompt": "Add Claude Code structure to my project so I can use agents and hooks. I want a code reviewer agent and a pre-commit hook.",
+      "expected_output": "Scaffolds .claude/agents/ and .claude/hooks/ directories, invokes agent-development skill to create code-reviewer.md with proper <example> blocks, invokes hook-development skill to create PreToolUse hook in .claude/settings.json, generates a settings.json with correct permissions structure, reports completion summary with next steps."
+    },
+    {
+      "id": 4,
+      "prompt": "Convert my monorepo to follow Claude Code specs. It has Python and TypeScript packages in packages/*. Make sure the MCP config is also set up.",
+      "expected_output": "Detects regular project (no .claude-plugin/), creates .claude/ structure, creates CLAUDE.md with monorepo architecture section documenting packages/, creates .mcp.json using template from references/templates.md with placeholder stdio and http servers, runs validation checks (jq on JSON files, line count on CLAUDE.md), invokes mcp-integration skill for server configuration details, outputs final compliance report."
+    }
+  ]
+}
