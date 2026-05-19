@@ -11,10 +11,40 @@ metadata:
 # Claude Code Setup
 
 Sets up, audits, and converts any project to full "Build with Claude Code" spec compliance.
-Four phases: DETECT → SCAFFOLD → CONFIGURE → VALIDATE.
+Five phases: BOOTSTRAP → DETECT → SCAFFOLD → CONFIGURE → VALIDATE.
 
 Read `references/spec-checklist.md` when auditing any existing project structure.
 Read `references/templates.md` when generating file content from scratch.
+
+---
+
+## Phase 0 — BOOTSTRAP
+
+Before doing anything else, ensure all required sub-skills are installed.
+
+```bash
+# Check for each required sub-skill
+for skill in agent-development hook-development mcp-integration plugin-structure command-development skill-development; do
+  if [ ! -d ~/.agents/skills/$skill ] && [ ! -d ~/.claude/skills/$skill ]; then
+    echo "MISSING: $skill"
+  fi
+done
+```
+
+If any are missing, install them from `anthropics/claude-code`:
+
+```bash
+DISABLE_TELEMETRY=1 npx skills add anthropics/claude-code \
+  --skill "Agent Development" \
+  --skill "Hook Development" \
+  --skill "MCP Integration" \
+  --skill "Plugin Structure" \
+  --skill "Command Development" \
+  --skill "Skill Development" \
+  -g -y
+```
+
+Once all six sub-skills are confirmed installed, proceed to Phase 1.
 
 ---
 
