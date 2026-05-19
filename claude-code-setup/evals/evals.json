@@ -20,6 +20,11 @@
       "id": 4,
       "prompt": "Convert my monorepo to follow Claude Code specs. It has Python and TypeScript packages in packages/*. Make sure the MCP config is also set up.",
       "expected_output": "Detects regular project (no .claude-plugin/), creates .claude/ structure, creates CLAUDE.md with monorepo architecture section documenting packages/, creates .mcp.json using template from references/templates.md with placeholder stdio and http servers, runs validation checks (jq on JSON files, line count on CLAUDE.md), invokes mcp-integration skill for server configuration details, outputs final compliance report."
+    },
+    {
+      "id": 5,
+      "prompt": "Audit my project for Claude Code compliance. Here's what I have: a CLAUDE.md (120 lines), a .claude/settings.json with just {} in it, and nothing else.",
+      "expected_output": "Runs DETECT phase, identifies as regular project. Reads spec-checklist.md. Reports CLAUDE.md as present but flags unknown section coverage. Reports settings.json as NEEDS REVIEW (missing permissions and hooks keys). Scaffolds missing .claude/ subdirs (.rules, .skills, .agents, .hooks, .output-styles). Outputs minimal settings.json template with correct permission_mode: 'default'. Does NOT overwrite existing CLAUDE.md. Outputs ✓/✗/~ status for every checklist item."
     }
   ]
 }

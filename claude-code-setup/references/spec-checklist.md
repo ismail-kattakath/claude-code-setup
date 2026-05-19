@@ -28,10 +28,11 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | `.claude/` | Yes | Base directory |
 | `.claude/settings.json` | Yes | Permissions + hooks |
 | `.claude/settings.local.json` | Yes (gitignored) | Personal overrides |
-| `.claude/rules/` | Recommended | Scoped rules files |
+| `.claude/rules/` | Recommended | Scoped rules .md files (frontmatter: `globs`, `alwaysApply`) |
 | `.claude/agents/` | If using agents | Subagent .md files |
 | `.claude/skills/` | If using project skills | skill-name/SKILL.md pattern |
 | `.claude/hooks/` | If using hooks | Hook scripts |
+| `.claude/output-styles/` | If using output styles | Reusable output format definitions |
 
 ---
 
@@ -44,7 +45,7 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | `permissions.allow` uses correct patterns | See patterns table below |
 | Has `hooks` key | Object with event arrays |
 | Has at least one Stop hook | Quality enforcement |
-| `permission_mode` set | `"ask"` (default) or `"allow"` |
+| `permission_mode` set (if explicit) | Valid: `"default"` `"dontAsk"` `"acceptEdits"` `"bypassPermissions"` `"plan"` `"auto"` |
 | No hardcoded secrets | Env vars only |
 
 **Allowed tool pattern syntax:**

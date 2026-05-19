@@ -43,14 +43,14 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
       }
     ]
   },
-  "permission_mode": "ask"
+  "permission_mode": "default"
 }
 ```
 
 **Notes:**
 - Add `"Bash(pytest *)"`, `"Bash(cargo *)"`, `"Bash(go test *)"` etc. as needed for your stack.
 - Add `"mcp__server-name__*"` entries for any MCP servers in `.mcp.json`.
-- `permission_mode: "allow"` disables interactive prompts (use in trusted environments only).
+- Valid `permission_mode` values: `"default"` (interactive), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve edits), `"bypassPermissions"` (no checks — dangerous), `"plan"` (read-only), `"auto"` (smart). Omit the field to use `"default"`.
 
 ---
 
@@ -178,6 +178,7 @@ assistant: \"[Response]\"
 model: inherit
 color: blue
 tools: ["Read", "Write", "Grep", "Bash"]
+# isolation: worktree   # uncomment to run this agent in an isolated git checkout
 ---
 
 You are [role description] specializing in [domain].
@@ -386,7 +387,30 @@ Read `references/[other].md` when [other condition].
 
 ---
 
-## Template 8: .gitignore additions
+## Template 8: Rules file (.claude/rules/your-topic.md)
+
+```markdown
+---
+description: [When this rule applies — shown in /rules list]
+globs:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+alwaysApply: false
+---
+
+[Rule content — plain markdown instructions applied to matching files]
+
+Example: Always use named exports. Never use default exports in this project.
+```
+
+**Field rules:**
+- `globs`: file patterns this rule applies to (omit to apply to all files)
+- `alwaysApply`: `true` to always load regardless of active file; `false` to load only when a matching file is in scope
+- Body: plain markdown — no special format, just instructions
+
+---
+
+## Template 9: .gitignore additions
 
 Append these lines to your existing `.gitignore` (or create it if missing):
 

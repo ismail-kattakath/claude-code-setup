@@ -56,7 +56,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$PROJECT_ROOT"
 
 # Core .claude/ structure
-mkdir -p .claude/rules .claude/skills .claude/agents .claude/hooks
+mkdir -p .claude/rules .claude/skills .claude/agents .claude/hooks .claude/output-styles
 
 # Create files only if missing
 [ -f CLAUDE.md ]               || touch CLAUDE.md
@@ -104,7 +104,7 @@ Tailor `allowedTools` to the actual tools the project uses (grep for MCP usage, 
 Key fields to set:
 - `permissions.allow` — array of tool patterns (e.g. `"Bash(git:*)"`, `"Read"`, `"mcp__server__*"`)
 - `hooks` — at minimum a `Stop` hook for quality enforcement
-- `permission_mode` — default `"ask"` for new projects
+- `permission_mode` — valid values: `"default"` (interactive, recommended), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve file edits only), `"bypassPermissions"` (no checks, dangerous), `"plan"` (read-only), `"auto"` (smart). Omit to use `"default"`.
 
 ### 3c. plugin.json (plugin projects only)
 
