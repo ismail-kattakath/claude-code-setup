@@ -4,12 +4,13 @@ A Claude Code skill that **audits, scaffolds, and converts any project** to full
 
 ## What it does
 
-In four phases:
+In five phases:
 
-1. **DETECT** — Determines if the project is a regular project or a Claude Code plugin, and audits the existing structure against spec
-2. **SCAFFOLD** — Creates all missing directories and files (without overwriting existing ones)
-3. **CONFIGURE** — Fills in required files using spec-compliant templates (CLAUDE.md, settings.json, plugin.json, hooks.json, .mcp.json)
-4. **VALIDATE** — Runs structural and JSON validation checks, outputs a compliance report
+1. **BOOTSTRAP** — Checks for required sub-skills (`agent-development`, `hook-development`, `mcp-integration`, `plugin-structure`, `command-development`, `skill-development`) and installs any that are missing from `anthropics/claude-code`
+2. **DETECT** — Determines if the project is a regular project or a Claude Code plugin, and audits the existing structure against spec
+3. **SCAFFOLD** — Creates all missing directories and files (without overwriting existing ones)
+4. **CONFIGURE** — Fills in required files using spec-compliant templates (CLAUDE.md, settings.json, plugin.json, hooks.json, .mcp.json)
+5. **VALIDATE** — Runs structural and JSON validation checks, outputs a compliance report
 
 ## Skills it orchestrates
 
@@ -54,7 +55,7 @@ The skill activates when you ask Claude Code to:
 
 ```
 claude-code-setup/
-├── SKILL.md                          # Main instructions (253 lines)
+├── SKILL.md                          # Main instructions (283 lines)
 ├── references/
 │   ├── spec-checklist.md             # Complete compliance audit checklist
 │   └── templates.md                  # Copy-paste templates for all spec files
