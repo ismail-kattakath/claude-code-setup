@@ -134,7 +134,7 @@ Tailor `allowedTools` to the actual tools the project uses (grep for MCP usage, 
 Key fields to set:
 - `permissions.allow` — array of tool patterns (e.g. `"Bash(git:*)"`, `"Read"`, `"mcp__server__*"`)
 - `hooks` — at minimum a `Stop` hook for quality enforcement
-- `permission_mode` — valid values: `"default"` (interactive, recommended), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve file edits only), `"bypassPermissions"` (no checks, dangerous), `"plan"` (read-only), `"auto"` (smart). Omit to use `"default"`.
+- `permissions.defaultMode` — valid values: `"default"` (interactive, recommended), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve file edits only), `"bypassPermissions"` (no checks, dangerous), `"plan"` (read-only), `"auto"` (smart). Omit to use `"default"`.
 
 ### 3c. plugin.json (plugin projects only)
 
@@ -149,7 +149,7 @@ All internal paths in plugin.json MUST use `${CLAUDE_PLUGIN_ROOT}`. Never use ab
 
 ### 3d. hooks/hooks.json (plugin projects only)
 
-Invoke the **hook-development** skill for hooks.json format details.
+Invoke the **hook-development** skill for hooks.json format details (29+ event types, all 5 handler types).
 
 Plugin format wraps events inside a `"hooks"` key:
 ```json
@@ -162,14 +162,15 @@ Settings format (`.claude/settings.json`) uses events directly at top level — 
 
 Invoke the **mcp-integration** skill for transport type details.
 
-Prefer `http` transport for remote servers, `stdio` for local processes.
+Prefer `http` (or `streamable-http`) transport for remote servers, `stdio` for local processes.
+Note: `sse` transport is deprecated — use `http` instead.
 Template in `references/templates.md` covers both patterns.
 
 ### 3f. agents/*.md
 
-Invoke the **agent-development** skill for frontmatter format and `<example>` block requirements.
+Invoke the **agent-development** skill for the full frontmatter field set and description guidance.
 
-Critical: every agent `description` field MUST contain `<example>` blocks with context/user/assistant/commentary structure. Agents without examples will not trigger reliably.
+The `description` field must clearly state when to delegate to this agent — specific trigger conditions and task scope. No `<example>` blocks are required by the spec.
 
 ### 3g. .gitignore additions
 
@@ -222,7 +223,7 @@ done
 | plugin.json | Valid JSON, has `name` field, all paths use `${CLAUDE_PLUGIN_ROOT}` |
 | hooks.json | Valid JSON, plugin format has `hooks` wrapper |
 | .mcp.json | Valid JSON, no hardcoded credentials |
-| agents/*.md | Every file has `description` with `<example>` block |
+| agents/*.md | Every file has `name` and `description` with clear trigger conditions |
 
 ```bash
 # Validate JSON files
@@ -261,8 +262,8 @@ Next steps:
 | Task | Skill to invoke |
 |------|----------------|
 | plugin.json manifest, `${CLAUDE_PLUGIN_ROOT}`, auto-discovery | **plugin-structure** |
-| agent frontmatter, `<example>` blocks, model/color/tools | **agent-development** |
-| hooks.json format, 9 event types, prompt vs command hooks | **hook-development** |
+| agent frontmatter (full field set), description guidance, model/color/tools | **agent-development** |
+| hooks.json format, 29+ event types, all 5 handler types | **hook-development** |
 | .mcp.json, transport types, tool naming `mcp__server__*` | **mcp-integration** |
 | slash commands, YAML frontmatter, `$ARGUMENTS` | **command-development** |
 | SKILL.md anatomy, progressive disclosure, references/ | **skill-development** |
@@ -278,6 +279,8 @@ Invoke the relevant sub-skill whenever the user asks a deeper question about tha
 - settings.json `allowedTools` patterns: `"Read"`, `"Edit"`, `"Write"`, `"Bash(git:*)"`, `"mcp__server__*"`
 - Plugin internal paths: always `${CLAUDE_PLUGIN_ROOT}`, never absolute
 - settings.local.json: MUST be gitignored (personal overrides)
-- Agent descriptions: MUST have `<example>` blocks or they won't trigger
+- Agent descriptions: must clearly state trigger conditions and task scope — no `<example>` blocks required
+- `permissions.defaultMode` (inside `permissions` object): controls interaction mode; valid values: `"default"`, `"acceptEdits"`, `"plan"`, `"auto"`, `"dontAsk"`, `"bypassPermissions"`
 - hooks.json (plugin): wrap events inside `{"hooks": {…}}` — different from settings.json format
+- SSE transport is deprecated in .mcp.json — use `http` or `streamable-http` instead
 - .worktreeinclude: lists gitignored files that should still be copied to worktrees

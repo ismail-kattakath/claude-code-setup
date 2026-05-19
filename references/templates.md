@@ -8,6 +8,7 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
 
 ```json
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Read",
@@ -17,7 +18,8 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
       "Bash(npm run *)",
       "Bash(npx *)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "default"
   },
   "hooks": {
     "Stop": [
@@ -42,15 +44,14 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
         ]
       }
     ]
-  },
-  "permission_mode": "default"
+  }
 }
 ```
 
 **Notes:**
 - Add `"Bash(pytest *)"`, `"Bash(cargo *)"`, `"Bash(go test *)"` etc. as needed for your stack.
 - Add `"mcp__server-name__*"` entries for any MCP servers in `.mcp.json`.
-- Valid `permission_mode` values: `"default"` (interactive), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve edits), `"bypassPermissions"` (no checks — dangerous), `"plan"` (read-only), `"auto"` (smart). Omit the field to use `"default"`.
+- `permissions.defaultMode` valid values: `"default"` (interactive), `"dontAsk"` (auto-approve all), `"acceptEdits"` (auto-approve edits), `"bypassPermissions"` (no checks — dangerous), `"plan"` (read-only), `"auto"` (smart). Omit to use `"default"`.
 
 ---
 
@@ -148,6 +149,7 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
 - All path values MUST use `${CLAUDE_PLUGIN_ROOT}` — never hardcode absolute paths.
 - Custom paths supplement (not replace) auto-discovery in default directories.
 - `agents` field accepts a string OR an array of strings.
+- For persistent data that survives plugin updates, use `${CLAUDE_PLUGIN_DATA}` (resolves to `~/.claude/plugins/data/{plugin-id}/`). `${CLAUDE_PLUGIN_ROOT}` changes on update; `${CLAUDE_PLUGIN_DATA}` is stable.
 
 ---
 
@@ -156,29 +158,25 @@ Copy-paste ready templates for all required files. Replace `[PLACEHOLDERS]` with
 ```markdown
 ---
 name: agent-name
-description: "Use this agent when [specific triggering conditions]. Examples:
-
-<example>
-Context: [Scenario where this agent is needed]
-user: \"[What the user says to trigger this agent]\"
-assistant: \"[How Claude should respond, invoking this agent]\"
-<commentary>
-[Why this agent is the right choice here — what capability it provides]
-</commentary>
-</example>
-
-<example>
-Context: [A different scenario]
-user: \"[Alternative phrasing that should trigger this agent]\"
-assistant: \"[Response]\"
-<commentary>
-[Why this agent applies in this case too]
-</commentary>
-</example>"
-model: inherit
-color: blue
-tools: ["Read", "Write", "Grep", "Bash"]
-# isolation: worktree   # uncomment to run this agent in an isolated git checkout
+description: "Use this agent when [specific triggering conditions — be precise about what tasks, files, or situations should trigger delegation to this agent]."
+# --- optional fields below ---
+model: inherit              # sonnet | opus | haiku | full-model-id | inherit
+color: blue                 # red | blue | green | yellow | purple | orange | pink | cyan
+tools: ["Read", "Grep", "Bash"]   # omit for full tool access
+# disallowedTools: ["Write"]       # deny specific tools
+# permissionMode: acceptEdits      # default | acceptEdits | plan | auto | dontAsk | bypassPermissions
+# maxTurns: 20                     # max agentic turns
+# skills:                          # preloaded skills
+#   - api-conventions
+# memory: project                  # user | project | local
+# background: false                # true to always run as background task
+# isolation: worktree              # ONLY valid value is "worktree"
+# effort: medium                   # low | medium | high | xhigh | max
+# mcpServers:                      # inline or named MCP servers
+#   - github
+# hooks:                           # hooks scoped to this agent
+#   PreToolUse: [...]
+# initialPrompt: "..."             # auto-submitted as first turn
 ---
 
 You are [role description] specializing in [domain].
@@ -202,10 +200,11 @@ You are [role description] specializing in [domain].
 
 **Field rules:**
 - `name`: kebab-case, 3–50 chars, alphanumeric start/end, no underscores
-- `description`: MUST include `<example>` blocks — agents without examples rarely trigger
+- `description`: clearly state when to delegate — specific trigger conditions, task types, or file patterns. No `<example>` blocks required.
 - `model`: use `inherit` unless the agent specifically needs `opus` (most capable) or `haiku` (fastest)
-- `color`: blue/cyan = analysis; green = success tasks; yellow = validation; red = critical/security; magenta = creative
+- `color`: blue/cyan = analysis; green = success tasks; yellow = validation; red = critical/security; purple = creative
 - `tools`: omit for full access, or list minimum needed tools
+- `isolation: worktree` is the only valid isolation value — runs the agent in an isolated git checkout
 
 ---
 
@@ -315,26 +314,28 @@ You are [role description] specializing in [domain].
         "X-Client": "claude-code"
       }
     },
-    "hosted-service": {
-      "type": "sse",
-      "url": "https://mcp.example.com/sse"
+    "real-time-service": {
+      "type": "ws",
+      "url": "wss://stream.example.com/mcp"
     }
   }
 }
 ```
 
+> **Note:** The `sse` transport type is deprecated. Migrate existing SSE servers to `"type": "http"` (also accepted as `"type": "streamable-http"`).
+
 **Transport selection guide:**
 | Situation | Use |
 |-----------|-----|
 | Running a local Node/Python/Go binary | stdio (default, no `type` field needed) |
-| REST API with token auth | `"type": "http"` |
-| Hosted service with OAuth (Asana, GitHub, etc.) | `"type": "sse"` |
+| REST API with token auth | `"type": "http"` (or `"streamable-http"`) |
+| Hosted service with OAuth (Asana, GitHub, etc.) | `"type": "http"` — SSE is deprecated |
 | Real-time/streaming requirements | `"type": "ws"` |
 
 **Rules:**
 - Server names: kebab-case
 - stdio: use `${CLAUDE_PLUGIN_ROOT}` for paths inside plugin, `${CLAUDE_PROJECT_DIR}` for project-relative paths
-- http/sse/ws: always HTTPS/WSS, never HTTP/WS
+- http/ws: always HTTPS/WSS, never HTTP/WS
 - All secrets via `${ENV_VAR}` syntax in `env` or `headers` — never hardcoded
 - File is committed to git; document all required env vars in CLAUDE.md
 
@@ -389,6 +390,7 @@ Read `references/[other].md` when [other condition].
 
 ## Template 8: Rules file (.claude/rules/your-topic.md)
 
+**Variant A — session-scoped (loads at session start, like CLAUDE.md):**
 ```markdown
 ---
 description: [When this rule applies — shown in /rules list]
@@ -403,9 +405,24 @@ alwaysApply: false
 Example: Always use named exports. Never use default exports in this project.
 ```
 
+**Variant B — file-scoped (loads only when Claude reads a matching file):**
+```markdown
+---
+paths:
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+---
+# Testing Rules
+
+- Use `describe`/`it` blocks, not `test`
+- Each test must have a descriptive name that explains the expected behaviour
+- Always use `beforeEach` for setup, never duplicate setup in individual tests
+```
+
 **Field rules:**
-- `globs`: file patterns this rule applies to (omit to apply to all files)
-- `alwaysApply`: `true` to always load regardless of active file; `false` to load only when a matching file is in scope
+- `globs` + `alwaysApply`: traditional session-scoped loading
+- `paths`: file-scoped loading — rule loads only when Claude opens a file matching the glob
+- Without `paths:` → loads at session start; with `paths:` → loads on file access
 - Body: plain markdown — no special format, just instructions
 
 ---
@@ -425,3 +442,77 @@ Append these lines to your existing `.gitignore` (or create it if missing):
 .env.local
 .env.*.local
 ```
+
+---
+
+## Template 10: Hook handler types (all 5)
+
+Use these inside any `"hooks"` array in `settings.json` or `hooks/hooks.json`:
+
+```json
+[
+  {
+    "type": "command",
+    "command": "bash /path/to/script.sh",
+    "timeout": 10
+  },
+  {
+    "type": "prompt",
+    "prompt": "Review the action and return approve or block with reason.",
+    "timeout": 20
+  },
+  {
+    "type": "http",
+    "url": "https://hooks.example.com/claude-event",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer ${HOOK_TOKEN}"
+    },
+    "timeout": 10
+  },
+  {
+    "type": "mcp_tool",
+    "server": "my-mcp-server",
+    "tool": "validate_action",
+    "timeout": 15
+  },
+  {
+    "type": "agent",
+    "agent": "security-reviewer",
+    "timeout": 30
+  }
+]
+```
+
+**Handler type summary:**
+| Type | What it does |
+|------|-------------|
+| `command` | Runs a shell command; stdout `approve`/`block` controls flow |
+| `prompt` | Sends a prompt to Claude for a decision |
+| `http` | POSTs event data to an HTTP endpoint |
+| `mcp_tool` | Calls a named MCP tool with the event context |
+| `agent` | Delegates the decision to a named agent |
+
+---
+
+## Template 11: Output style (.claude/output-styles/your-style.md)
+
+```markdown
+---
+name: Terse
+description: Short, direct answers with no preamble or filler
+keep-coding-instructions: true
+force-for-plugin: false
+---
+
+Be brief. Lead with the answer. No preamble, no "Sure!", no summaries at the end.
+Use bullet points for lists. Use code blocks for code. Omit pleasantries.
+```
+
+**Frontmatter fields:**
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Display name shown in `/config` |
+| `description` | string | Short description of the style |
+| `keep-coding-instructions` | bool | `true` to keep coding instructions active alongside this style |
+| `force-for-plugin` | bool | Plugin only — `true` to always apply this style for the plugin |

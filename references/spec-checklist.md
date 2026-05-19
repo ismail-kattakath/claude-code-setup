@@ -28,7 +28,7 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | `.claude/` | Yes | Base directory |
 | `.claude/settings.json` | Yes | Permissions + hooks |
 | `.claude/settings.local.json` | Yes (gitignored) | Personal overrides |
-| `.claude/rules/` | Recommended | Scoped rules .md files (frontmatter: `globs`, `alwaysApply`) |
+| `.claude/rules/` | Recommended | Scoped rules .md files (frontmatter: `globs`, `alwaysApply`, or `paths`) |
 | `.claude/agents/` | If using agents | Subagent .md files |
 | `.claude/skills/` | If using project skills | skill-name/SKILL.md pattern |
 | `.claude/hooks/` | If using hooks | Hook scripts |
@@ -45,7 +45,8 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | `permissions.allow` uses correct patterns | See patterns table below |
 | Has `hooks` key | Object with event arrays |
 | Has at least one Stop hook | Quality enforcement |
-| `permission_mode` set (if explicit) | Valid: `"default"` `"dontAsk"` `"acceptEdits"` `"bypassPermissions"` `"plan"` `"auto"` |
+| `$schema` field present (recommended) | `"https://json.schemastore.org/claude-code-settings.json"` |
+| `permissions.defaultMode` set (if explicit) | Valid: `"default"` `"dontAsk"` `"acceptEdits"` `"bypassPermissions"` `"plan"` `"auto"` |
 | No hardcoded secrets | Env vars only |
 
 **Allowed tool pattern syntax:**
@@ -76,6 +77,32 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 }
 ```
 
+**All 29+ hook event types:**
+| Group | Events |
+|-------|--------|
+| Session | `SessionStart`, `Setup`, `SessionEnd` |
+| Per-turn | `UserPromptSubmit`, `UserPromptExpansion`, `Stop`, `StopFailure` |
+| Tool | `PreToolUse`, `PermissionRequest`, `PermissionDenied`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch` |
+| Subagent | `SubagentStart`, `SubagentStop`, `TaskCreated`, `TaskCompleted`, `TeammateIdle` |
+| Memory/config | `InstructionsLoaded`, `ConfigChange`, `CwdChanged`, `FileChanged` |
+| Worktree | `WorktreeCreate`, `WorktreeRemove` |
+| Compaction | `PreCompact`, `PostCompact` |
+| MCP | `Elicitation`, `ElicitationResult` |
+| Notifications | `Notification` |
+
+**All 5 hook handler types:**
+| Type | Description |
+|------|-------------|
+| `command` | Run a shell command; stdout controls approve/block |
+| `http` | POST to an HTTP endpoint |
+| `mcp_tool` | Call an MCP tool |
+| `prompt` | Send a prompt to Claude for a decision |
+| `agent` | Invoke a named agent |
+
+**Permissions — `Agent(...)` syntax (v2.1.63+):**
+- Use `"Agent(agent-name)"` in `permissions.allow` to permit delegating to a specific agent
+- Previously called `"Task(agent-name)"` — `Task(...)` is the old name, now renamed to `Agent(...)`
+
 ---
 
 ## 4. .mcp.json
@@ -95,8 +122,8 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | Type | Required fields | Best for |
 |------|----------------|----------|
 | stdio (default) | `command`, `args` | Local processes, custom servers |
-| http | `type: "http"`, `url` | Remote REST APIs, token auth |
-| sse | `type: "sse"`, `url` | Hosted services, OAuth |
+| http | `type: "http"`, `url` | Remote REST APIs, token auth (also accepted as `streamable-http`) |
+| sse | `type: "sse"`, `url` | **DEPRECATED** — migrate to `http` |
 | ws | `type: "ws"`, `url` | Real-time, streaming |
 
 ---
@@ -132,14 +159,29 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | File is kebab-case `.md` | e.g. `code-reviewer.md` |
 | YAML frontmatter is valid | `---` delimiters |
 | `name` field present | Kebab-case, 3–50 chars, no underscores |
-| `description` field present | Contains triggering conditions |
-| `description` has `<example>` blocks | REQUIRED for reliable triggering |
-| Each `<example>` has context/user/assistant | Full structure |
-| Each `<example>` has `<commentary>` | Explains why agent triggers |
-| `model` field set | `inherit`, `sonnet`, `opus`, or `haiku` |
-| `color` field set | One of: blue, cyan, green, yellow, magenta, red |
-| `tools` field if restricting access | Array of tool names |
+| `description` field present | Clearly states when to delegate — specific trigger conditions and task scope |
 | System prompt under 10,000 chars | Hard limit |
+
+**Full set of supported agent frontmatter fields:**
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | Yes | Kebab-case, 3–50 chars, no underscores |
+| `description` | Yes | When to delegate; specific trigger conditions |
+| `model` | No | `sonnet`, `opus`, `haiku`, full model ID, or `inherit` |
+| `color` | No | `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, `cyan` |
+| `tools` | No | Tool allowlist (inherits all if omitted) |
+| `disallowedTools` | No | Tool denylist |
+| `permissionMode` | No | Same values as `defaultMode`; overrides session mode for this agent |
+| `maxTurns` | No | Max agentic turns (integer) |
+| `skills` | No | Array of preloaded skill names |
+| `memory` | No | `user`, `project`, or `local` |
+| `background` | No | `true` to always run as background task |
+| `isolation` | No | Only valid value: `"worktree"` |
+| `effort` | No | `low`, `medium`, `high`, `xhigh`, `max` |
+| `mcpServers` | No | Inline or named MCP servers for this agent |
+| `hooks` | No | Hooks scoped to this agent only |
+| `initialPrompt` | No | Auto-submitted as the agent's first turn |
 
 ---
 
@@ -158,6 +200,29 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | Large content in `references/` | Loaded on demand |
 | References explicitly called out | "Read references/foo.md when X" |
 
+**Claude Code-specific SKILL.md frontmatter fields (beyond agentskills.io base spec):**
+
+| Field | Notes |
+|-------|-------|
+| `when_to_use` | Extra trigger context shown to users |
+| `paths` | Auto-load this skill when Claude reads matching files (glob patterns) |
+| `disable-model-invocation: true` | User-only trigger — Claude will not auto-invoke |
+| `context: fork` | Run skill in a forked subagent context |
+| `agent` | Which subagent to use when `context: fork` is set |
+
+**Rules file (`paths:` frontmatter):**
+Rules in `.claude/rules/` support a `paths:` frontmatter key for file-scoped loading:
+- Without `paths:` → loads at session start (like CLAUDE.md)
+- With `paths:` → loads only when Claude reads a file matching the glob patterns
+
+```markdown
+---
+paths:
+  - "**/*.test.ts"
+---
+# Testing Rules
+```
+
 ---
 
 ## 9. Plugin-Specific Requirements
@@ -175,6 +240,7 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | All custom paths use `${CLAUDE_PLUGIN_ROOT}` | Never absolute paths |
 | Custom paths start with `./` in manifest | Relative to plugin root |
 | No hardcoded absolute paths | Security and portability |
+| Persistent data uses `${CLAUDE_PLUGIN_DATA}` | Survives plugin updates; resolves to `~/.claude/plugins/data/{plugin-id}/` |
 
 ### hooks/hooks.json (plugin format)
 
@@ -185,7 +251,7 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | Has `"hooks"` wrapper key | DIFFERENT from settings.json format |
 | Events nested inside `"hooks"` | `{"hooks": {"PreToolUse": [...]}}` |
 | All hook commands use `${CLAUDE_PLUGIN_ROOT}` | Portable paths |
-| All `"type"` values are valid | `"prompt"` or `"command"` |
+| All `"type"` values are valid | `"command"`, `"http"`, `"mcp_tool"`, `"prompt"`, or `"agent"` |
 | Matcher patterns are correct | Exact name, `Name|Other`, `*`, or regex |
 | Timeouts set appropriately | Command: ≤60s, Prompt: ≤30s |
 
@@ -219,6 +285,27 @@ Use this checklist when auditing any project. Mark each item: ✓ present, ✗ m
 | `$ARGUMENTS` used for dynamic input | When command takes user args |
 | `allowed-tools` scoped to needed tools | Least privilege |
 | No hardcoded credentials in body | Dynamic via bash or env |
+
+---
+
+## 11. Output Styles (if used)
+
+**Location:** `.claude/output-styles/<name>.md`
+
+| Check | Notes |
+|-------|-------|
+| File is kebab-case `.md` | e.g. `terse.md` |
+| Has YAML frontmatter with `name` and `description` | Required |
+| `keep-coding-instructions` set | `true` to preserve coding instructions alongside this style |
+| `force-for-plugin` set (plugin only) | `true` to always apply this style for the plugin |
+
+**Frontmatter fields:**
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Display name shown in `/config` |
+| `description` | string | Short description of the style |
+| `keep-coding-instructions` | bool | Preserve coding instructions when this style is active |
+| `force-for-plugin` | bool | Plugin only — always apply this style |
 
 ---
 
